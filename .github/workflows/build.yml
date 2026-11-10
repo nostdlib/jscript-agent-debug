@@ -36,7 +36,9 @@ jobs:
           path: jscript-agent.js
 
   # ═════════════════════════════════════════════════════════════════════════
-  # Test — cscript smoke run (H_URL unset ⇒ silent (log ships only), clean 'fail')
+  # Test — cscript smoke run (DBG_ECHO=1, H_URL unset ⇒ console 'result: fail',
+  # log ships only — zero local echo; without DBG_ECHO the debug tail pops a
+  # MessageBox instead, which would block a headless runner)
   # ═════════════════════════════════════════════════════════════════════════
   test-windows-cscript:
     needs: build
@@ -50,9 +52,8 @@ jobs:
       - name: Test agent (cscript, H_URL unset)
         shell: pwsh
         run: |
-          Copy-Item jscript-agent.js master.js
-          Add-Content -Path master.js -Value 'WScript.Echo("result: " + runAgent());'
-          $output = (cscript //nologo master.js 2>&1 | Out-String)
+          $env:DBG_ECHO = '1'
+          $output = (cscript //nologo jscript-agent.js 2>&1 | Out-String)
           Write-Host $output
           if ($output -match "beacon endpoint not set") { Write-Host "FAILED: unexpected local echo of 'beacon endpoint not set'"; exit 1 }
           if (-not ($output -match "result: fail")) { Write-Host "FAILED: expected 'result: fail'"; exit 1 }

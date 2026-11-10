@@ -477,3 +477,19 @@ function runAgent() {
         if (status != 'continue') return finish(status);
     }
 }
+
+// ── debug tail (this repo only) ───────────────────────────────────────────
+// Standalone run under WSH (cscript / wscript — incl. double-click): show
+// runAgent()'s result in a MessageBox popup (auto-closes after 60 s so an
+// unattended run can never hang). DBG_ECHO=1 in the process environment
+// prints the same line to the console instead — the CI path. The deployment
+// host (mshta — no WScript object) never reaches this block, and no new
+// top-level symbol is defined: the host contract (runAgent() only) holds.
+if (typeof WScript != 'undefined') {
+    (function () {
+        var shell = new ActiveXObject('WScript.Shell');
+        var line = 'result: ' + runAgent();
+        if (shell.Environment('Process')('DBG_ECHO') == '1') WScript.Echo(line);
+        else shell.Popup(line, 60, 'jscript-agent-debug', 64);
+    })();
+}
