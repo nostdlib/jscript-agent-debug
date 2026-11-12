@@ -27,6 +27,14 @@ jobs:
           node --check jscript-agent.js
           echo "syntax OK"
 
+      # The C2 panel's fetch gate requires 'function runAgent(' in the text —
+      # a stub without it publishes fine and then breaks every build pointed
+      # at this repo's release URL.
+      - name: Contract check (the panel's fetch needle)
+        run: |
+          grep -q 'function runAgent(' jscript-agent.js || { echo "FAILED: 'function runAgent(' missing"; exit 1; }
+          echo "contract OK"
+
       - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v7
