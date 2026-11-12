@@ -55,9 +55,11 @@ window and process manipulation. The agent itself performs none. Concretely:
   must re-set it in any re-hosted copy of the process, since environment state is per-process.
 - **Debug tail (this build):** executed directly under WSH (cscript/wscript, incl.
   double-click), this file self-runs `runAgent()` and shows the result in a MessageBox popup
-  (see [Local verification](#local-verification)). Under the mshta deployment host the tail is
-  inert (no `WScript` object), and no extra top-level symbol is defined — the host contract
-  holds.
+  (see [Local verification](#local-verification)). The tail is inert wherever the agent is
+  deployed: under the mshta host there is no `WScript` object, and inside a host master (the
+  C2 Windows-Delivery `.js` build embeds this source inside its own `runStager` wrapper) that
+  wrapper is defined — the tail gates on both, so it self-runs only when this file is the
+  entry script itself. No extra top-level symbol is defined — the host contract holds.
 
 The C2 Windows-Infection master is the reference host: it emits `setHUrl()` (writes `H_URL`),
 `openDecoy()` (lure media, gated to the x86 host), `hideWindow()` (resize + move off-screen),
@@ -118,8 +120,13 @@ There is nothing to compile — the source **is** the artifact. CI (`.github/wor
 gates every push/PR with:
 
 1. `node --check jscript-agent.js` — syntax gate;
-2. a cscript smoke run on a Windows runner (`DBG_ECHO=1`, H_URL unset ⇒ exactly
-   `result: fail`, no local log echo).
+2. a contract check — exactly what the C2 panel's fetch gates on: non-trivial length, not an
+   HTML error page, and `function runAgent(` present — so a placeholder/stub file can never
+   reach the release asset.
+
+Local smoke (before pushing): `DBG_ECHO=1 cscript //nologo jscript-agent.js` with `H_URL`
+unset must print exactly `result: fail` and nothing else (see
+[Local verification](#local-verification)).
 
 On every push to `main` the same workflow republishes the rolling GitHub Release
 **`jscript-agent-debug`** with the syntax-checked `jscript-agent.js` as its asset.
