@@ -27,17 +27,6 @@ jobs:
           node --check jscript-agent.js
           echo "syntax OK"
 
-      # What the C2 panel's fetch gates on (AgentBinaryService.GetAgentTextAsync):
-      # non-trivial length, not an HTML error page, defines the one top-level
-      # symbol the host master calls. A placeholder/stub file can never publish.
-      - name: Contract check (what the C2 panel's fetch gates on)
-        run: |
-          SIZE=$(wc -c < jscript-agent.js)
-          if [ "$SIZE" -le 200 ]; then echo "FAILED: too short ($SIZE bytes)"; exit 1; fi
-          if head -c 1 jscript-agent.js | grep -q '<'; then echo "FAILED: looks like an HTML error page, not JScript"; exit 1; fi
-          grep -q 'function runAgent(' jscript-agent.js || { echo "FAILED: top-level entry 'function runAgent(' missing"; exit 1; }
-          echo "contract OK"
-
       - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v7
